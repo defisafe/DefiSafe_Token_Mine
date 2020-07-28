@@ -17,6 +17,7 @@ contract DefiSafeMine {
 
     struct MineManagerStruct {
         uint256 totalMinersCount;
+        uint256 mineTotalTokens;
         //10:Have authority to mine
         mapping(address => uint256) minersPermissions;
     }
@@ -26,7 +27,7 @@ contract DefiSafeMine {
 
     constructor() public {
         owner = msg.sender;
-        mineManager = MineManagerStruct({totalMinersCount: 0});
+        mineManager = MineManagerStruct({totalMinersCount: 0,mineTotalTokens:0});
     }
 
 
@@ -101,10 +102,15 @@ contract DefiSafeMine {
                 realMineTokens = tokenMineBalance;
             }
             if(defiSafeToken.transfer(receiveAddress,realMineTokens)){
-                dataStatistics.mineTotalTokens = dataStatistics.mineTotalTokens.add(realMineTokens);
+                mineManager.mineTotalTokens = dataStatistics.mineTotalTokens.add(realMineTokens);
                 emit MineTokensEvent(msg.sender,receiveAddress,realMineTokens);
             }
         }
     }
+
+    function getTotalTokensOfMine()public view returns(uint256){
+        return mineManager.mineTotalTokens;
+    }
+
 
 }
