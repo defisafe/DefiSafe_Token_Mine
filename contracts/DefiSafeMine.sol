@@ -1,6 +1,6 @@
 pragma solidity 0.6.0;
 import "./DefiSafeTokenInterface.sol";
-
+import "./SafeMath.sol";
 
 contract DefiSafeMine {
 
@@ -41,10 +41,10 @@ contract DefiSafeMine {
         uint256 authority = mineManager.minersPermissions[_addr];
         require(authority != 10,"Has authorized .");
         mineManager.minersPermissions[_addr] = 10;
-        mineManager.totalMinersCount = minersPermissions.totalMinersCount.add(1);
+        mineManager.totalMinersCount = mineManager.totalMinersCount.add(1);
     }
 
-    function removeDefiSafeMineAddress(address _addr)public onlyOwer {
+    function removeDefiSafeMineAddress(address _addr)public onlyOwner {
         require(_addr != address(0),"DefiSafeMineAddress error .");
         uint256 authority = mineManager.minersPermissions[_addr];
         require(authority == 10,"No Authority .");
@@ -102,7 +102,7 @@ contract DefiSafeMine {
                 realMineTokens = tokenMineBalance;
             }
             if(defiSafeToken.transfer(receiveAddress,realMineTokens)){
-                mineManager.mineTotalTokens = dataStatistics.mineTotalTokens.add(realMineTokens);
+                mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(realMineTokens);
                 emit MineTokensEvent(msg.sender,receiveAddress,realMineTokens);
             }
         }
