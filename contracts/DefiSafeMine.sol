@@ -113,4 +113,8 @@ contract DefiSafeMine {
     }
 
 
+     function mulDiv (uint256 _x, uint256 _y, uint256 _z) public pure returns (uint256) {
+        uint256 temp = _x.mul(_y);
+        return temp.div(_z);
+    }
 }
