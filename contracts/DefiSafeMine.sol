@@ -9,7 +9,7 @@ contract DefiSafeMine {
     address payable owner;
 
     address public defiSafeTokenAddress;
-    address public defiSafeTokenOwnerAddress;
+    address public defiSafeTokenProjectAddress;
     address public defiSafeTokenOperateAccount;
     uint256 constant private C1 = 5;
     uint256 constant private C2 = 14;
@@ -57,9 +57,9 @@ contract DefiSafeMine {
         defiSafeTokenAddress = _addr;
     }
 
-     function setDefiSafeTokenOwnerAddress(address _addr)public onlyOwner {
-        require(_addr != address(0),"defiSafeTokenOwnerAddress error .");
-        defiSafeTokenOwnerAddress = _addr;
+     function setDefiSafeTokenProjectAddress(address _addr)public onlyOwner {
+        require(_addr != address(0),"defiSafeTokenProjectAddress error .");
+        defiSafeTokenProjectAddress = _addr;
     }
 
     function setDefiSafeTokenOperateAccount(address _addr)public onlyOwner {
@@ -80,12 +80,12 @@ contract DefiSafeMine {
         require(getMinerPermission(msg.sender),"No permission .");
         require(receiveAddress != address(0),"rec address error .");
         require(defiSafeTokenAddress != address(0),"DefiSafeTokenAddress no init .");
-        require(defiSafeTokenOwnerAddress != address(0),"defiSafeTokenOwnerAddress no init .");
+        require(defiSafeTokenProjectAddress != address(0),"defiSafeTokenProjectAddress no init .");
         require(defiSafeTokenOperateAccount != address(0),"defiSafeTokenOperateAccount no init .");
         
         DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
         uint256 tokenAssertRatio = mulDiv(userTotalAssets,C1,C2);
-        uint256 tokenAdminBalance = defiSafeToken.getAdminBalance();
+        uint256 tokenAdminBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);;
         uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
         uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
         uint256 tokenSurplusBalance = tokenAdminBalance + tokenOperateBalance + tokenMineBalance;
@@ -111,6 +111,16 @@ contract DefiSafeMine {
     function getTotalTokensOfMine()public view returns(uint256){
         return mineManager.mineTotalTokens;
     }
+
+    function getTotalTokensOfFree()public view returns(uint256){
+        uint256 tokenProjectBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);;
+        uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
+        uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
+        uint256 tokenSurplusBalance = tokenProjectBalance + tokenOperateBalance + tokenMineBalance;
+        uint256 tokenFrees = DSE_TOKEN_INIT_TOTAL.sub(tokenSurplusBalance);
+        return tokenFrees;
+    }
+
 
 
      function mulDiv (uint256 _x, uint256 _y, uint256 _z) public pure returns (uint256) {
