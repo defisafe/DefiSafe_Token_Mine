@@ -85,7 +85,7 @@ contract DefiSafeMine {
         
         DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
         uint256 tokenAssertRatio = mulDiv(userTotalAssets,C1,C2);
-        uint256 tokenAdminBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);;
+        uint256 tokenAdminBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);
         uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
         uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
         uint256 tokenSurplusBalance = tokenAdminBalance + tokenOperateBalance + tokenMineBalance;
@@ -113,7 +113,8 @@ contract DefiSafeMine {
     }
 
     function getTotalTokensOfFree()public view returns(uint256){
-        uint256 tokenProjectBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);;
+        DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
+        uint256 tokenProjectBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);
         uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
         uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
         uint256 tokenSurplusBalance = tokenProjectBalance + tokenOperateBalance + tokenMineBalance;
