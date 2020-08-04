@@ -11,8 +11,8 @@ contract DefiSafeMine {
     address public defiSafeTokenAddress;
     address public defiSafeTokenProjectAddress;
     address public defiSafeTokenOperateAccount;
-    uint256 constant private C1 = 7;
-    uint256 constant private C2 = 200;
+    uint256 constant private C1 = 5;
+    uint256 constant private C2 = 14;
     uint256 constant private DSE_TOKEN_INIT_TOTAL = 1000000000 * 1e18;
 
     struct MineManagerStruct {
