@@ -100,7 +100,7 @@ contract DefiSafeMine {
         }else if(mineTokens <= (40000000 * 1e18)){
             mineTokens = mineTokens.mul(2);
         }else if(mineTokens <= (100000000 * 1e18)){
-            mineTokens = mulDiv(mulDiv,15,10);
+            mineTokens = mulDiv(mineTokens,15,10);
         }
 
         if(tokenMineBalance >0 && mineTokens > 0){
