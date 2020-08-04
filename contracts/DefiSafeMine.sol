@@ -11,8 +11,8 @@ contract DefiSafeMine {
     address public defiSafeTokenAddress;
     address public defiSafeTokenProjectAddress;
     address public defiSafeTokenOperateAccount;
-    uint256 constant private C1 = 5;
-    uint256 constant private C2 = 14;
+    uint256 constant private C1 = 7;
+    uint256 constant private C2 = 200;
     uint256 constant private DSE_TOKEN_INIT_TOTAL = 1000000000 * 1e18;
 
     struct MineManagerStruct {
@@ -94,6 +94,15 @@ contract DefiSafeMine {
         uint256 tokenTotalRatio = DSE_TOKEN_INIT_TOTAL.div(1e18);
         uint256 tokenDifficulty = mulDiv(tokenAssertRatio,tokenFreeRatio,tokenTotalRatio);
         uint256 mineTokens = tokenAssertRatio.sub(tokenDifficulty);
+
+        if(mineTokens <= (10000000 * 1e18)){
+            mineTokens = mineTokens.mul(5);
+        }else if(mineTokens <= (40000000 * 1e18)){
+            mineTokens = mineTokens.mul(2);
+        }else if(mineTokens <= (100000000 * 1e18)){
+            mineTokens = mulDiv(mulDiv,15,10);
+        }
+
         if(tokenMineBalance >0 && mineTokens > 0){
             uint256 realMineTokens = 0;
             if(tokenMineBalance > mineTokens){
