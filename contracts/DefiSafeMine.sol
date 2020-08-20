@@ -8,9 +8,14 @@ contract DefiSafeMine {
 
     address payable owner;
 
+    struct LockedAccountsStruct {
+        uint256 totalAmount;
+        mapping(uint256 => address) lockAccounts;
+    }
+    //Control difficulty account management
+    LockedAccountsStruct private lockAccountsManager;
+
     address public defiSafeTokenAddress;
-    address public defiSafeTokenProjectAddress;
-    address public defiSafeTokenOperateAccount;
     uint256 constant private C1 = 5;
     uint256 constant private C2 = 14;
     uint256 constant private DSE_TOKEN_INIT_TOTAL = 1000000000 * 1e18;
@@ -28,12 +33,22 @@ contract DefiSafeMine {
     constructor() public {
         owner = msg.sender;
         mineManager = MineManagerStruct({totalMinersCount: 0,mineTotalTokens:0});
+        lockAccountsManager = LockedAccountsStruct({totalAmount : 1});
+        lockAccountsManager.lockAccounts[0] = address(this);
     }
-
 
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
+    }
+
+    function setLockAccountsManager(uint256 accountID,address accountAddress)public onlyOwner{
+        require(accountAddress != address(0),"accountAddress error !");
+        require(lockAccountsManager.lockAccounts[accountID] == address(0),"accountAddress is already supported.");
+        require(lockAccountsManager.totalAmount == accountID,"accountID error.");
+
+        lockAccountsManager.lockAccounts[accountID] = accountAddress;
+        lockAccountsManager.totalAmount = lockAccountsManager.totalAmount+1;
     }
 
     function setDefiSafeMineAddress(address _addr)public onlyOwner {
@@ -57,16 +72,6 @@ contract DefiSafeMine {
         defiSafeTokenAddress = _addr;
     }
 
-     function setDefiSafeTokenProjectAddress(address _addr)public onlyOwner {
-        require(_addr != address(0),"defiSafeTokenProjectAddress error .");
-        defiSafeTokenProjectAddress = _addr;
-    }
-
-    function setDefiSafeTokenOperateAccount(address _addr)public onlyOwner {
-        require(_addr != address(0),"defiSafeTokenOperateAccount error .");
-        defiSafeTokenOperateAccount = _addr;
-    }
- 
     function getMinerPermission(address miner) private returns(bool){
         uint256 authority = mineManager.minersPermissions[miner];
         if(authority == 10){
@@ -76,30 +81,33 @@ contract DefiSafeMine {
         }
     }
 
+
     function startMine(uint256 userTotalAssets,address receiveAddress) public{
         require(getMinerPermission(msg.sender),"No permission .");
         require(receiveAddress != address(0),"rec address error .");
         require(defiSafeTokenAddress != address(0),"DefiSafeTokenAddress no init .");
-        require(defiSafeTokenProjectAddress != address(0),"defiSafeTokenProjectAddress no init .");
-        require(defiSafeTokenOperateAccount != address(0),"defiSafeTokenOperateAccount no init .");
+        require(lockAccountsManager.totalAmount > 2,"lockAccountsManager no set .");
         
         DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
         uint256 tokenAssertRatio = mulDiv(userTotalAssets,C1,C2);
-        uint256 tokenAdminBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);
-        uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
+        uint256 tokenSurplusBalance = 0;
         uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
-        uint256 tokenSurplusBalance = tokenAdminBalance + tokenOperateBalance + tokenMineBalance;
+        for(uint i = 0;i<(lockAccountsManager.totalAmount);i++){
+            address lockAccount = lockAccountsManager.lockAccounts[i];
+            uint256 lockAccountTokenBalance = defiSafeToken.balanceOf(lockAccount);
+            tokenSurplusBalance = tokenSurplusBalance.add(lockAccountTokenBalance);
+        }
         uint256 tokenFree = DSE_TOKEN_INIT_TOTAL.sub(tokenSurplusBalance);
         uint256 tokenFreeRatio = tokenFree.div(1e18);
         uint256 tokenTotalRatio = DSE_TOKEN_INIT_TOTAL.div(1e18);
         uint256 tokenDifficulty = mulDiv(tokenAssertRatio,tokenFreeRatio,tokenTotalRatio);
         uint256 mineTokens = tokenAssertRatio.sub(tokenDifficulty);
 
-        if(mineTokens <= (10000000 * 1e18)){
+        if(mineManager.mineTotalTokens <= (10000000 * 1e18)){
             mineTokens = mineTokens.mul(5);
-        }else if(mineTokens <= (40000000 * 1e18)){
+        }else if(mineManager.mineTotalTokens <= (40000000 * 1e18)){
             mineTokens = mineTokens.mul(2);
-        }else if(mineTokens <= (100000000 * 1e18)){
+        }else if(mineManager.mineTotalTokens <= (100000000 * 1e18)){
             mineTokens = mulDiv(mineTokens,15,10);
         }
 
@@ -123,14 +131,21 @@ contract DefiSafeMine {
 
     function getTotalTokensOfFree()public view returns(uint256){
         DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
-        uint256 tokenProjectBalance = defiSafeToken.balanceOf(defiSafeTokenProjectAddress);
-        uint256 tokenOperateBalance = defiSafeToken.balanceOf(defiSafeTokenOperateAccount);
-        uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
-        uint256 tokenSurplusBalance = tokenProjectBalance + tokenOperateBalance + tokenMineBalance;
-        uint256 tokenFrees = DSE_TOKEN_INIT_TOTAL.sub(tokenSurplusBalance);
+        uint256 tokenSurplusBalance = 0;
+        for(uint i = 0;i<(lockAccountsManager.totalAmount);i++){
+            address lockAccount = lockAccountsManager.lockAccounts[i];
+            uint256 lockAccountTokenBalance = defiSafeToken.balanceOf(lockAccount);
+            tokenSurplusBalance = tokenSurplusBalance.add(lockAccountTokenBalance);
+        }
+        uint256 tokenFree = DSE_TOKEN_INIT_TOTAL.sub(tokenSurplusBalance);
         return tokenFrees;
     }
 
+
+    function getLockAccount(uint256 accountID)public view returns(address){
+        require(accountID < lockAccountsManager.totalAmount,"accountID error .");
+        return lockAccountsManager.lockAccounts[accountID];
+    }
 
 
      function mulDiv (uint256 _x, uint256 _y, uint256 _z) public pure returns (uint256) {
