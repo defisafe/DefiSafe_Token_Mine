@@ -26,6 +26,16 @@ contract DefiSafeMine {
         //10:Have authority to mine
         mapping(address => uint256) minersPermissions;
     }
+
+    address private communityAccount;
+    address public communityRatio;
+
+    struct MineManagerStruct {
+        uint256 totalMinersCount;
+        uint256 mineTotalTokens;
+        //10:Have authority to mine
+        mapping(address => uint256) minersPermissions;
+    }
     MineManagerStruct private mineManager;
 
     event MineTokensEvent(address miner,address user,uint256 mineTokens);
@@ -40,6 +50,16 @@ contract DefiSafeMine {
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
+    }
+
+    function setCommunityRatio(uint256 _ratio)public onlyOwner{
+        require(_ratio <= 100,"_ratio error !");
+        communityRatio = _ratio;
+    }
+
+    function setCommunityAccount(address _communityAddress)public onlyOwner{
+        require(_communityAddress != address(0),"communityAddress error !");
+        communityAccount = _communityAddress;
     }
 
     function setLockAccountsManager(uint256 accountID,address accountAddress)public onlyOwner{
@@ -87,7 +107,8 @@ contract DefiSafeMine {
         require(receiveAddress != address(0),"rec address error .");
         require(defiSafeTokenAddress != address(0),"DefiSafeTokenAddress no init .");
         require(lockAccountsManager.totalAmount > 2,"lockAccountsManager no set .");
-        
+        require(communityAccount != address(0),"communityAccount error !");
+
         DefiSafeTokenInterface defiSafeToken = DefiSafeTokenInterface(defiSafeTokenAddress);
         uint256 tokenAssertRatio = mulDiv(userTotalAssets,C1,C2);
         uint256 tokenSurplusBalance = 0;
@@ -118,10 +139,14 @@ contract DefiSafeMine {
             }else{
                 realMineTokens = tokenMineBalance;
             }
-            if(defiSafeToken.transfer(receiveAddress,realMineTokens)){
-                mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(realMineTokens);
-                emit MineTokensEvent(msg.sender,receiveAddress,realMineTokens);
-            }
+
+            uint256 communityTokens = mulDiv(realMineTokens,communityRatio,100);
+            uint256 userTokens = realMineTokens.sub(communityTokens);
+
+            require(defiSafeToken.transfer(receiveAddress,userTokens),"user receive tokens error !");
+            require(defiSafeToken.transfer(communityAccount,communityTokens),"community receive tokens error !");
+            mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(userTokens);
+            mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(communityTokens);
         }
     }
 
