@@ -1,7 +1,7 @@
 pragma solidity 0.6.0;
 
 
-interface DefiSafeTokenInterface {
+interface ERC20 {
     function totalSupply() external view returns (uint supply);
     function balanceOf(address _owner) external view returns (uint balance);
     function transfer(address _to, uint _value) external returns (bool success);
