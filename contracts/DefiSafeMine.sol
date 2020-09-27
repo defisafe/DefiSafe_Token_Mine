@@ -11,6 +11,8 @@ contract DefiSafeMine {
 
     struct PlatformData {
         uint256 mortgageTokenTotal;// Token total
+        uint256 totalInsuredAssets;
+        uint256 totalLossesAssets;
     }
     //Environmental statistics
     PlatformData public platformDataManager;
@@ -61,7 +63,7 @@ contract DefiSafeMine {
         owner = msg.sender;
         mineManager = MineManagerStruct({totalMinersCount: 0,mineTotalTokens:0});
         lockAccountsManager = LockedAccountsStruct({totalAmount : 1});
-        platformDataManager = PlatformData({mortgageTokenTotal: 0});
+        platformDataManager = PlatformData({mortgageTokenTotal: 0,totalInsuredAssets: 0,totalLossesAssets: 0});
         lockAccountsManager.lockAccounts[0] = address(this);
         communityManager = CommunityManager({totalUsers:1});
         communityManager.users[0] = CommunityUser({name: owner,authorization: 0});
@@ -255,6 +257,8 @@ contract DefiSafeMine {
         mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(userTokens);
         mineManager.mineTotalTokens = mineManager.mineTotalTokens.add(communityTokens);
 
+        platformDataManager.totalInsuredAssets = platformDataManager.totalInsuredAssets.add(userTotalAssets);
+        platformDataManager.totalLossesAssets = platformDataManager.totalLossesAssets.add(loseAssets);
         emit MineTokensEvent(msg.sender,receiveAddress,userTokens);
     }
 
@@ -347,6 +351,10 @@ contract DefiSafeMine {
             userTokenAmount = userTokenAmount.add(tokenAAmount);
             totalAmount = totalAmount.add(reserveA);
         }
+    }
+
+    function getPlatformData()public view returns(uint256 totalAssets,uint256 loseAssets){
+        return(platformDataManager.totalInsuredAssets,platformDataManager.totalLossesAssets);
     }
 
      function mulDiv (uint256 _x, uint256 _y, uint256 _z) public pure returns (uint256) {
