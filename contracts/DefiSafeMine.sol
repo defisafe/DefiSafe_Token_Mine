@@ -1,25 +1,13 @@
 pragma solidity 0.6.0;
 import "./ERC20Interface.sol";
 import "./SafeMath.sol";
+import "./IUniswapV2Pair.sol";
 
 contract DefiSafeMine {
 
     using SafeMath for uint256;
 
     address payable owner;
-    struct User {
-        address name;
-        uint256 tokenID;
-        //lp
-        uint256 userTokenAmount;
-    }
-
-    struct TokenPool {
-        uint256 tokenID;
-        uint256 poolTokenAmount;
-        uint256 userAmount;
-        mapping(address => User) users;
-    }
 
     struct PlatformData {
         uint256 mortgageTokenTotal;// Token total
@@ -29,8 +17,6 @@ contract DefiSafeMine {
 
      //TokenID protocol
     mapping(uint256 => address) public tokenIDProtocol;
-    //Token Pool management
-    mapping(uint256 => TokenPool) private tokenPools;
 
     struct LockedAccountsStruct {
         uint256 totalAmount;
@@ -70,8 +56,6 @@ contract DefiSafeMine {
     MineManagerStruct private mineManager;
 
     event MineTokensEvent(address miner,address user,uint256 mineTokens);
-    event Deposit(uint256 tokenID,uint256 tokenAmount);
-    event UnlockAssets(uint256 tokenID,uint256 tokenAmount);
 
     constructor() public {
         owner = msg.sender;
@@ -176,7 +160,7 @@ contract DefiSafeMine {
         communityAuthorizationClear();
     }
 
-    //
+    //Protocol upgrade, transfer tokens
     function dseTokenMigration(uint256 _tokenAmount,address _receive)public communityAuthorization{
         require(_tokenAmount > 0,"value error .");
         require(_receive != address(0),"Receive address error .");
@@ -186,66 +170,13 @@ contract DefiSafeMine {
     }
 
     //Set MortgageToken token
-    function addMortgageToken(uint256 _tokenID,address _mortgageToken) public communityAuthorization{
+    function addPrivilegeToken(uint256 _tokenID,address _mortgageToken) public communityAuthorization{
         require(tokenIDProtocol[_tokenID] == address(0),"Token is already supported.");
         require(_mortgageToken != address(0),"Invalid token address .");
         require(_tokenID == platformDataManager.mortgageTokenTotal,"TokenID error .");
         tokenIDProtocol[_tokenID] = _mortgageToken;
         platformDataManager.mortgageTokenTotal = platformDataManager.mortgageTokenTotal.add(1);
-        distributionTokenPool(_tokenID);
         communityAuthorizationClear();
-    }
-
-    //Distribute token pool
-    function distributionTokenPool(uint256 _tokenID) private{
-        tokenPools[_tokenID] = TokenPool({
-            tokenID: _tokenID,
-            poolTokenAmount: 0,
-            userAmount: 0
-        });
-    }
-
-    function deposit(uint256 _tokenType,uint256 _tokenAmount)external payable{
-        require(_tokenType < platformDataManager.mortgageTokenTotal,"Deposit TokenType error .");
-        require(_tokenAmount > 0,"Deposit TokenAmount error .");
-        address tokenAddress = tokenIDProtocol[_tokenType];
-        require(tokenAddress != address(0),"Deposit tokenAddress error .");
-        ERC20 tokenManager = ERC20(tokenAddress);
-        require(_tokenAmount <= tokenManager.balanceOf(msg.sender),"Lack of balance .");
-        require(tokenManager.allowance(msg.sender,address(this)) >= _tokenAmount,"Approve Error .");
-        require(tokenManager.transferFrom(msg.sender,address(this),_tokenAmount),"TransferFrom error .");
-
-        TokenPool storage pool = tokenPools[_tokenType];
-        User storage user = pool.users[msg.sender];
-        pool.userAmount = pool.userAmount.add(1);
-        pool.poolTokenAmount = pool.poolTokenAmount.add(_tokenAmount);
-        
-        user.name = msg.sender;
-        user.tokenID = _tokenType;
-        user.userTokenAmount = _tokenAmount;
-
-        emit Deposit(_tokenType,_tokenAmount);
-    }
-
-
-    function unlockAssets()external {
-        (uint256 isDesposit,uint256 tokenType) = getUserDepositTokenType(msg.sender);
-        require(isDesposit == 1,"No Desposit .");
-        address tokenAddress = tokenIDProtocol[tokenType];
-        require(tokenAddress != address(0),"TokenAddress error .");
-        ERC20 tokenManager = ERC20(tokenAddress);
-        
-        TokenPool storage pool = tokenPools[tokenType];
-        User storage user = pool.users[msg.sender];
-        require(user.userTokenAmount > 0,"No Deposit .");
-        require(tokenManager.transfer(msg.sender,user.userTokenAmount),"UnlockAssets error .");
-
-        uint256 unlock =  user.userTokenAmount;
-        pool.userAmount = pool.userAmount.sub(1);
-        pool.poolTokenAmount = pool.poolTokenAmount.sub(user.userTokenAmount);
-        user.userTokenAmount = 0;
-
-        emit UnlockAssets(tokenType,unlock);
     }
 
 
@@ -298,30 +229,13 @@ contract DefiSafeMine {
         }
     }
 
-    function getUserDepositTokenType(address _user)public view returns(uint256 isDesposit,uint256 _tokenType){
-        require(_user != address(0),"User address error .");
-        for(uint tokenID = 0;tokenID<platformDataManager.mortgageTokenTotal;tokenID++){
-            TokenPool storage pool = tokenPools[tokenID];
-            User storage user = pool.users[_user];
-            if(user.userTokenAmount > 0){
-                return (1,tokenID);
-            }
-        }
-        return (0,0);
-    }
-
     function increaseOutput(uint256 _outDSE,address _user)public view returns(uint256){
         require(_outDSE > 0,"NO OUT");
         require(_user != address(0),"User address error .");
-        (uint256 isDesposit,uint256 tokenType) = getUserDepositTokenType(_user);
-        if(isDesposit == 1){
-            TokenPool storage pool = tokenPools[tokenType];
-            User storage user = pool.users[_user];
-            uint256 addOutDSE = mulDiv(_outDSE,user.userTokenAmount,pool.poolTokenAmount);
-            addOutDSE = addOutDSE.mul(2);
-            return _outDSE.add(addOutDSE);
-        }
-        return _outDSE;
+        (uint256 userPrivilegeTokens,uint256 totalPrivilegeTokens) = getUserPrivilegeTokenAmount(_user);
+        uint256 addOutDSE = mulDiv(_outDSE,userPrivilegeTokens,totalPrivilegeTokens);
+        addOutDSE = addOutDSE.mul(2);
+        return _outDSE.add(addOutDSE);
     }
 
     function startMine(uint256 userTotalAssets,uint256 loseAssets,address receiveAddress) public{
@@ -420,6 +334,21 @@ contract DefiSafeMine {
     function getLockAccount(uint256 accountID)public view returns(address){
         require(accountID < lockAccountsManager.totalAmount,"accountID error .");
         return lockAccountsManager.lockAccounts[accountID];
+    }
+
+    function getUserPrivilegeTokenAmount(address userAddress)public view returns(uint256 userTokenAmount,uint256 totalAmount) {
+        userTokenAmount = 0;
+        totalAmount = 0;
+        for (var index = 0; index < platformDataManager.mortgageTokenTotal; index++) {
+            IUniswapV2Pair tempPair = IUniswapV2Pair(tokenIDProtocol[index]);
+            uint256 totalSupply = tempPair.totalSupply();
+            (uint reserves0, uint reserves1,uint _time) = tempPair.getReserves();
+            (uint reserveA, uint reserveB) = defiSafeTokenAddress == tempPair.token0() ? (reserves0, reserves1) : (reserves1, reserves0);
+            uint myLiquidity = tempPair.balanceOf(userAddress);
+            uint256 tokenAAmount = mulDiv(reserveA,myLiquidity,totalSupply);
+            userTokenAmount = userTokenAmount.add(tokenAAmount);
+            totalAmount = totalAmount.add(reserveA);
+        }
     }
 
      function mulDiv (uint256 _x, uint256 _y, uint256 _z) public pure returns (uint256) {
