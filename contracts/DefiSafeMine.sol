@@ -128,7 +128,7 @@ contract DefiSafeMine {
     }
 
     function communityRemoveUser(address userAddress)public returns(uint256){
-        (uint256 isExist,uint256 userID) = isCommunityUser();
+        (uint256 isExist,) = isCommunityUser();
         require(isExist == 10,"No Exist .");
         require(communityManager.totalUsers > 5,"Don't allow .");
         uint256 authorizationUsers = 0;
@@ -143,7 +143,6 @@ contract DefiSafeMine {
             }
         }
         require(authorizationUsers > communityManager.totalUsers.sub(2),"Don't allow .");
-        bool isRemove = false;       
         for (uint256 userID = removeUserID;userID < communityManager.totalUsers;userID++){
             communityManager.users[userID] = communityManager.users[userID+1];
         }
@@ -300,7 +299,6 @@ contract DefiSafeMine {
         ERC20 defiSafeToken = ERC20(defiSafeTokenAddress);
         uint256 tokenAssertRatio = mulDiv(assertsAmount,C1,C2);
         uint256 tokenSurplusBalance = 0;
-        uint256 tokenMineBalance = defiSafeToken.balanceOf(address(this));
         for(uint i = 0;i<(lockAccountsManager.totalAmount);i++){
             address lockAccount = lockAccountsManager.lockAccounts[i];
             uint256 lockAccountTokenBalance = defiSafeToken.balanceOf(lockAccount);
@@ -339,11 +337,11 @@ contract DefiSafeMine {
     function getUserPrivilegeTokenAmount(address userAddress)public view returns(uint256 userTokenAmount,uint256 totalAmount) {
         userTokenAmount = 0;
         totalAmount = 0;
-        for (var index = 0; index < platformDataManager.mortgageTokenTotal; index++) {
+        for (uint256 index = 0; index < platformDataManager.mortgageTokenTotal; index++) {
             IUniswapV2Pair tempPair = IUniswapV2Pair(tokenIDProtocol[index]);
             uint256 totalSupply = tempPair.totalSupply();
-            (uint reserves0, uint reserves1,uint _time) = tempPair.getReserves();
-            (uint reserveA, uint reserveB) = defiSafeTokenAddress == tempPair.token0() ? (reserves0, reserves1) : (reserves1, reserves0);
+            (uint reserves0, uint reserves1,) = tempPair.getReserves();
+            (uint reserveA,) = defiSafeTokenAddress == tempPair.token0() ? (reserves0, reserves1) : (reserves1, reserves0);
             uint myLiquidity = tempPair.balanceOf(userAddress);
             uint256 tokenAAmount = mulDiv(reserveA,myLiquidity,totalSupply);
             userTokenAmount = userTokenAmount.add(tokenAAmount);
