@@ -160,16 +160,11 @@ contract DefiSafeMine {
         }
         require(authorizationUsers > communityManager.totalUsers.sub(2),"Don't allow .");
         bool isRemove = false;       
-        for (uint256 userID = 0;userID < communityManager.totalUsers;userID++){
-            if(userID == removeUserID){
-                isRemove = true;
-            }
-            if(isRemove){
-                communityManager.users[userID] = communityManager.users[userID+1];
-            }
+        for (uint256 userID = removeUserID;userID < communityManager.totalUsers;userID++){
+            communityManager.users[userID] = communityManager.users[userID+1];
         }
-        require(isRemove,"CommunityRemoveUser error .");
         communityManager.totalUsers = communityManager.totalUsers.sub(1);
+        return 1;
     }
 
     function communityUsersGet()public view returns(uint256){
@@ -201,7 +196,7 @@ contract DefiSafeMine {
         communityAuthorizationClear();
     }
 
-        //Distribute token pool
+    //Distribute token pool
     function distributionTokenPool(uint256 _tokenID) private{
         tokenPools[_tokenID] = TokenPool({
             tokenID: _tokenID,
@@ -222,8 +217,8 @@ contract DefiSafeMine {
 
         TokenPool storage pool = tokenPools[_tokenType];
         User storage user = pool.users[msg.sender];
-        pool.userAmount = pool.userAmount + 1;
-        pool.poolTokenAmount = pool.poolTokenAmount + _tokenAmount;
+        pool.userAmount = pool.userAmount.add(1);
+        pool.poolTokenAmount = pool.poolTokenAmount.add(_tokenAmount);
         
         user.name = msg.sender;
         user.tokenID = _tokenType;
@@ -246,8 +241,8 @@ contract DefiSafeMine {
         require(tokenManager.transfer(msg.sender,user.userTokenAmount),"UnlockAssets error .");
 
         uint256 unlock =  user.userTokenAmount;
-        pool.userAmount = pool.userAmount - 1;
-        pool.poolTokenAmount = pool.poolTokenAmount - user.userTokenAmount;
+        pool.userAmount = pool.userAmount.sub(1);
+        pool.poolTokenAmount = pool.poolTokenAmount.sub(user.userTokenAmount);
         user.userTokenAmount = 0;
 
         emit UnlockAssets(tokenType,unlock);
@@ -323,8 +318,8 @@ contract DefiSafeMine {
             TokenPool storage pool = tokenPools[tokenType];
             User storage user = pool.users[_user];
             uint256 addOutDSE = mulDiv(_outDSE,user.userTokenAmount,pool.poolTokenAmount);
-            addOutDSE = addOutDSE.mul(3);
-            return addOutDSE;
+            addOutDSE = addOutDSE.mul(2);
+            return _outDSE.add(addOutDSE);
         }
         return _outDSE;
     }
@@ -405,7 +400,6 @@ contract DefiSafeMine {
         return mineTokens;
     }
 
-
     function getTotalTokensOfMine()public view returns(uint256){
         return mineManager.mineTotalTokens;
     }
@@ -421,6 +415,7 @@ contract DefiSafeMine {
         uint256 tokenFree = DSE_TOKEN_INIT_TOTAL.sub(tokenSurplusBalance);
         return tokenFree;
     }
+
 
     function getLockAccount(uint256 accountID)public view returns(address){
         require(accountID < lockAccountsManager.totalAmount,"accountID error .");
