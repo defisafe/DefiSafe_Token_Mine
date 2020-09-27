@@ -10,4 +10,6 @@ interface DefiSafeMine {
     function communityUserAuthorizationState(uint256 userID)external view returns(uint256);
     function communityUserAuthorizationPerform()external returns(uint256);
     function communityRemoveUser(address userAddress)external returns(uint256);
+
+    function getUserPrivilegeTokenAmount(address userAddress)external view returns(uint256 userTokenAmount,uint256 totalAmount);
 }
